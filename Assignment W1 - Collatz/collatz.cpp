@@ -24,10 +24,10 @@ int main() {
     std::cout << currentNumberOfSequence << " ";
 
     while (oneCounter < MAX_NUMBER_OF_ONES) {
-        currentNumberOfSequence = findNextCollatzSequence(currentNumberOfSequence);
-        std::cout << currentNumberOfSequence << " ";
         if (currentNumberOfSequence == 1)
             oneCounter++;
+        currentNumberOfSequence = findNextCollatzSequence(currentNumberOfSequence);
+        std::cout << currentNumberOfSequence << " ";
     }
 
     return 0;
