@@ -14,7 +14,7 @@ int main() {
     int currentNumberOfSequence;
     int oneCounter = 0;
 
-    std::cout << "Please, enter the first number of the sequence: " << std::endl;
+    std::cout << "Enter the first number of the sequence: " << std::endl;
     std::cin >> currentNumberOfSequence;
     if(currentNumberOfSequence < 0) {
         std::cout << "Illegal, only positive numbers are allowed!";
@@ -23,12 +23,16 @@ int main() {
 
     std::cout << currentNumberOfSequence << " ";
 
+    if (currentNumberOfSequence == 1) oneCounter++;
+
     while (oneCounter < MAX_NUMBER_OF_ONES) {
-        if (currentNumberOfSequence == 1)
-            oneCounter++;
         currentNumberOfSequence = findNextCollatzSequence(currentNumberOfSequence);
         std::cout << currentNumberOfSequence << " ";
+        if (currentNumberOfSequence == 1)
+            oneCounter++;
     }
+
+    std::cout << "..." << std::endl;
 
     return 0;
 }
