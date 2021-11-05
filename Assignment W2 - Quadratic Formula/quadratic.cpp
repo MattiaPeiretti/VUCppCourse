@@ -42,7 +42,7 @@ int main()
     std::stringstream ss;
     ss.str(queryString);
     ss >> a >> b >> c;
-
+    std::cout << std::endl;
     // Calculate and check the discriminant
     D = calculateDiscriminant(a, b, c);
 
@@ -55,7 +55,7 @@ int main()
                   << " and "
                   << solutions.at(1);
     else if (calculatePossibleResults(D) == 1)
-        std::cout << "There are 1 solution." << std::endl
+        std::cout << "There is 1 solution." << std::endl
                   << std::endl
                   << "The solution is: " << solutions.at(0);
     else
