@@ -37,6 +37,8 @@
         "xutility": "cpp",
         "sstream": "cpp",
         "string": "cpp",
-        "tuple": "cpp"
+        "tuple": "cpp",
+        "*.tcc": "cpp",
+        "string_view": "cpp"
     }
 }
