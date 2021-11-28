@@ -7,37 +7,46 @@
 #define LOG(X) std::cout << X << std::endl;
 
 #include <iostream>
+#include <string>
 #include <vector>
+
+void printChessBoard(std::vector<std::vector<bool>> &board)
+{
+    static const std::string emptyCell = ".";
+    static const std::string queen = "Q";
+    static const std::string spacer = " ";
+
+    for (int y = 0; y < board.size(); y++)
+    {
+        for (int x = 0; x < board.size(); x++)
+        {
+            if (board.at(y).at(x))
+                std::cout << queen << spacer;
+            else
+                std::cout << emptyCell << spacer;
+        }
+        std::cout << std::endl;
+    }
+}
 
 // Check to see if there is any conflict with previously placed queens
 bool checkValidPosition(std::vector<std::vector<bool>> &board, int col, int row)
 {
-    //Horizontal check
+    //Checking horizontally and vertically
     for (int x = 0; x < board.size(); x++)
     {
         if (board.at(row).at(x))
-        {
             return false;
-        }
-    }
-    //Vertical check
-    for (int x = 0; x < board.size(); x++)
-    {
         if (board.at(x).at(col))
-        {
             return false;
-        }
     }
-
-    int d1BeginX;
-    int d1BeginY;
-
-    int d2BeginX;
-    int d2BeginY;
 
     int boardSize = board.size() - 1;
 
-    // Calculating Diagional 1
+    // Calculating top point of the Diagonal 1
+    int d1BeginX;
+    int d1BeginY;
+
     d1BeginY = row - col;
     if (d1BeginY < 0)
     {
@@ -47,7 +56,10 @@ bool checkValidPosition(std::vector<std::vector<bool>> &board, int col, int row)
     else
         d1BeginX = 0;
 
-    // Calculating Diagional 2
+    // Calculating top point of the Diagonal 2
+    int d2BeginX;
+    int d2BeginY;
+
     d2BeginX = col + row;
     if (d2BeginX > boardSize)
     { //                 Excess
@@ -56,8 +68,6 @@ bool checkValidPosition(std::vector<std::vector<bool>> &board, int col, int row)
     }
     else
         d2BeginY = 0;
-
-    // first diagonal
 
     int currentX1 = d1BeginX, currentY1 = d1BeginY;
     int currentX2 = d2BeginX, currentY2 = d2BeginY;
@@ -87,10 +97,25 @@ bool checkValidPosition(std::vector<std::vector<bool>> &board, int col, int row)
     return true;
 }
 
+int placedQueens = 0;
 bool placeQueens(int N, std::vector<std::vector<bool>> &board, int row)
 {
+    if (row >= N)
+        return 1;
+    printChessBoard(board);
+    std::cin.get();
 
-        placeQueens(N, board, row + 1);
+    for (int col = 0; col < board.size(); col++)
+    {
+        if (checkValidPosition(board, col, row))
+        {
+            board.at(row).at(col) = true;
+            if (placeQueens(N, board, row + 1))
+                return true;
+            board.at(row).at(col) = false;
+        }
+    }
+
     return 0;
 }
 
@@ -126,7 +151,8 @@ int main()
     std::vector<std::vector<bool>> chessBoard(chessBoardSize, std::vector<bool>(chessBoardSize, false));
     // result = placeQueens(numberOfQueens, chessBoard, 1);
 
-    chessBoard.at(0).at(0) = true;
-    std::cout << checkValidPosition(chessBoard, 4, 4) << std::endl;
+    placeQueens(numberOfQueens, chessBoard, 0);
+    printChessBoard(chessBoard);
+
     return 0;
 }
