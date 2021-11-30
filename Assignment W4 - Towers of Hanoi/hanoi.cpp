@@ -9,8 +9,6 @@
 #include <vector>
 #include <stack>
 
-//------------------------
-
 enum
 {
     pegA,
