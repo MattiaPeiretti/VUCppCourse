@@ -22,7 +22,7 @@
 using u32 = uint_least32_t;
 using engine = std::mt19937;
 
-enum directions
+enum Directions
 {
     none = -1,
     top = 0,
@@ -37,27 +37,31 @@ struct Coordinates
 {
     int x = 0;
     int y = 0;
-    directions direction;
+    Directions direction;
     Coordinates(){};
-    Coordinates(int _x, int _y, directions _direction = none)
+    Coordinates(int _x, int _y, Directions _direction = none)
     {
         x = _x;
         y = _y;
         direction = _direction;
+    }
+    bool operator==(const Coordinates &rhs) const
+    {
+        return std::tie(x, y, direction) == std::tie(rhs.x, rhs.y, rhs.direction);
     }
 };
 
 class Cell
 {
 private:
-    std::vector<directions> connections;
+    std::vector<Directions> connections;
     bool _isVisited = false;
 
 public:
     Cell(){};
-    std::vector<directions> getConnections();
-    bool setConnection(directions direction);
-    bool isConnectedTo(directions direction);
+    std::vector<Directions> getConnections();
+    bool setConnection(Directions direction);
+    bool isConnectedTo(Directions direction);
     bool setVisited();
     bool resetVisited();
     bool isVisited() { return _isVisited; }
@@ -69,7 +73,7 @@ public:
     }
 };
 
-bool Cell::setConnection(directions direction)
+bool Cell::setConnection(Directions direction)
 {
     if (isConnectedTo(direction))
         return false;
@@ -78,7 +82,7 @@ bool Cell::setConnection(directions direction)
     return true;
 }
 
-bool Cell::isConnectedTo(directions direction)
+bool Cell::isConnectedTo(Directions direction)
 {
     return (std::find(connections.begin(), connections.end(), direction) != connections.end());
 }
@@ -94,6 +98,10 @@ bool Cell::resetVisited()
     _isVisited = false;
     return true;
 }
+std::vector<Directions> Cell::getConnections()
+{
+    return connections;
+}
 
 // ========================
 
@@ -106,7 +114,6 @@ private:
     std::vector<Coordinates> availableNeighbors;
 
     void printHorizontalLine(int length, int row, bool endline);
-    Cell &getCellByCoordinates(int x, int y);
     //-- Generation
 
     std::stack<Coordinates> positionStack;
@@ -117,7 +124,8 @@ private:
 
 public:
     Maze(int _sizeX, int _sizeY, int _seed);
-    bool setCellConnection(int x, int y, directions direction);
+    Cell &getCellByCoordinates(int x, int y);
+    bool setCellConnection(int x, int y, Directions direction);
     void generateMaze();
     const void printMaze();
     bool generateWalls(Coordinates currentCoords, int visitedCount);
@@ -140,7 +148,7 @@ public:
     };
 };
 
-bool Maze::setCellConnection(int x, int y, directions direction)
+bool Maze::setCellConnection(int x, int y, Directions direction)
 {
     if (getCellByCoordinates(x, y).setConnection(direction) == false)
         return false;
@@ -293,7 +301,7 @@ const void Maze::printMaze()
 {
     const static std::string verticalWall = "|";
     const static std::string openVerticalWall = " ";
-    const static std::string filledCell = " . ";
+    const static std::string filledCell = " O ";
     const static std::string emptyCell = "   ";
     std::string cellContent;
     Cell currentCell;
@@ -333,21 +341,70 @@ Cell &Maze::getCellByCoordinates(int x, int y)
 
 // ========================
 
+Coordinates getCoordinatesFromDirection(Coordinates initialCoords, Directions direction)
+{
+    if (direction == top)
+        initialCoords.y--;
+    else if (direction == right)
+        initialCoords.x++;
+    else if (direction == bottom)
+        initialCoords.y++;
+    else if (direction == left)
+        initialCoords.x--;
+    else
+        return initialCoords; // Return initial coords if already in None state
+    return initialCoords;
+}
+
+bool findPath(Maze &m, Coordinates from, Coordinates to)
+{
+    std::vector<Directions> currentConnections;
+    // 1. M.at(from).visited <- true
+    m.getCellByCoordinates(from.x, from.y)
+        .setVisited();
+    // 2. if from equals to, return true
+    LOG("a");
+    if (from == to)
+        return true;
+    // 3. neighbours <- list of all direct neighbours of from that can be reached (that are not blocked by walls)
+    Coordinates currentNeighbor;
+    currentConnections = m.getCellByCoordinates(from.x, from.y).getConnections();
+    // 4. for all n in neighbours:
+    for (Directions &connection : currentConnections)
+    {
+        currentNeighbor = getCoordinatesFromDirection(from, connection);
+        //      if M.at(n).visited == false
+        if (m.getCellByCoordinates(currentNeighbor.x, currentNeighbor.y).isVisited() == false)
+        {
+            //          if findPath(n,to) == true, return true
+            if (findPath(m, currentNeighbor, to) == true)
+                return true;
+        }
+    }
+    // 5. M.at(from).visited <- false
+    m.getCellByCoordinates(from.x, from.y)
+        .resetVisited();
+    // 6. return false
+    return false;
+}
 int main(int argc, char *argv[])
 {
     // if (argc < 2)
     //     return -1;
 
+    // if (Coordinates(0, 0) == Coordinates(1, 0))
+    //     LOG("aaa");
+
     std::random_device os_seed;
     const u32 seed = os_seed();
 
-    Maze m(5, 5, seed);
-    // std::cout << m.setCellConnection(0, 0, bottom);
-    // std::cout << m.setCellConnection(4, 0, right);
-    // std::cout << m.setCellConnection(1, 4, top);
+    Maze m(25, 25, seed);
+
     m.generateMaze();
     std::cout
         << std::endl;
-    m.DEBUG();
+    if (findPath(m, Coordinates(0, 0), Coordinates(24, 24)))
+        LOG("Yay!");
+
     m.printMaze();
 }
