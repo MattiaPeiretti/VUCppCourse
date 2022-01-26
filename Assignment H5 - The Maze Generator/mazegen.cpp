@@ -4,13 +4,6 @@
 //  Assignment H5 - The Maze Generator
 // ============================================
 
-#define LOG(X) std::cout << X << std::endl;
-#define LOGV(x)                       \
-    std::cout << "( ";                \
-    for (auto &element : x)           \
-        std::cout << element << ", "; \
-    std::cout << ")" << std::endl;
-
 #include <iostream>
 #include <vector>
 #include <string>
@@ -34,27 +27,30 @@ enum Directions
     left
 };
 
-// ========================
-
 struct Coordinates
 {
+    Coordinates(){};
+    Coordinates(int _x, int _y, Directions _direction = none);
+
     int x = 0;
     int y = 0;
     Directions direction;
-    Coordinates(){};
-    Coordinates(int _x, int _y, Directions _direction = none)
-    {
-        x = _x;
-        y = _y;
-        direction = _direction;
-    }
+
+    // Overloading == operator to allow correct comparisons
     bool operator==(const Coordinates &rhs) const
     {
         return std::tie(x, y, direction) == std::tie(rhs.x, rhs.y, rhs.direction);
     }
 };
 
-Coordinates getCoordinatesFromDirection(Coordinates initialCoords, Directions direction)
+Coordinates::Coordinates(int _x, int _y, Directions _direction)
+{
+    x = _x;
+    y = _y;
+    direction = _direction;
+}
+
+Coordinates CalculateCoordinatesFromDirection(Coordinates initialCoords, Directions direction, bool carryDirection = false)
 {
     if (direction == top)
         initialCoords.y--;
@@ -66,6 +62,8 @@ Coordinates getCoordinatesFromDirection(Coordinates initialCoords, Directions di
         initialCoords.x--;
     else
         return initialCoords; // Return initial coords if already in None state
+    if (carryDirection)
+        initialCoords.direction = direction;
     return initialCoords;
 }
 
@@ -101,13 +99,10 @@ bool Cell::isConnectedTo(Directions direction)
     return (std::find(connections.begin(), connections.end(), direction) != connections.end());
 }
 
-// ========================
-
 class Maze
 {
 private:
     int sizeX, sizeY;
-    std::vector<Coordinates> availableNeighbors;
     std::vector<std::vector<Cell>> cells;
 
     // Generation
@@ -120,7 +115,7 @@ private:
 
     // Generation
     bool generateWalls(Coordinates currentCoords, int visitedCount);
-    bool setCellConnection(int x, int y, Directions direction);
+    bool setCellConnection(Coordinates coords, Directions direction);
 
 public:
     Maze(int _sizeX, int _sizeY, int _seed);
@@ -134,29 +129,29 @@ public:
 Maze::Maze(int _sizeX, int _sizeY, int _seed)
 {
     cells = std::vector<std::vector<Cell>>(_sizeX, std::vector<Cell>(_sizeY));
-
     sizeX = _sizeX;
     sizeY = _sizeY;
-
     generator = engine(_seed);
+
+    // Creating radom numbers distributors
     distribute2 = std::uniform_int_distribution<u32>(0, 1);
     distribute3 = std::uniform_int_distribution<u32>(0, 2);
 }
 
-bool Maze::setCellConnection(int x, int y, Directions direction)
+bool Maze::setCellConnection(Coordinates coords, Directions direction)
 {
-    if (getCellByCoordinates(x, y).setConnection(direction) == false)
+    if (getCellByCoordinates(coords).setConnection(direction) == false)
         return false;
 
     // Add opposite connection to adjacent neighbors
-    if (direction == top && y > 0)
-        getCellByCoordinates(x, y - 1).setConnection(bottom);
-    else if (direction == bottom && y < (sizeY - 1))
-        getCellByCoordinates(x, y + 1).setConnection(top);
-    else if (direction == left && x > 0)
-        getCellByCoordinates(x - 1, y).setConnection(right);
-    else if (direction == right && x < (sizeX - 1))
-        getCellByCoordinates(x + 1, y).setConnection(left);
+    if (direction == top && coords.y > 0)
+        getCellByCoordinates(coords.x, coords.y - 1).setConnection(bottom);
+    else if (direction == bottom && coords.y < (sizeY - 1))
+        getCellByCoordinates(coords.x, coords.y + 1).setConnection(top);
+    else if (direction == left && coords.x > 0)
+        getCellByCoordinates(coords.x - 1, coords.y).setConnection(right);
+    else if (direction == right && coords.x < (sizeX - 1))
+        getCellByCoordinates(coords.x + 1, coords.y).setConnection(left);
     else
         return false;
     return true;
@@ -166,9 +161,11 @@ void Maze::generateMaze()
 {
     static const Coordinates startCoords(0, 0);
     generateWalls(startCoords, 0);
+
+    // Clearing the cells from previous recursive backtracking
     for (std::vector<Cell> &row : cells)
-        for (Cell &element : row)
-            element.resetVisited();
+        for (Cell &cell : row)
+            cell.resetVisited();
 }
 
 bool Maze::generateWalls(Coordinates currentCoords, int visitedCount)
@@ -178,42 +175,28 @@ bool Maze::generateWalls(Coordinates currentCoords, int visitedCount)
 
     getCellByCoordinates(currentCoords).setVisited();
 
-    int availableNeighborsCount = 0;
-    availableNeighbors = {};
+    std::vector<Coordinates> availableNeighbors = {};
 
-    // -top
-    if ((currentCoords.y - 1) >= 0 && !(getCellByCoordinates(getCoordinatesFromDirection(currentCoords, top)).isVisited()))
-    {
-        availableNeighborsCount++;
-        availableNeighbors.push_back(Coordinates(currentCoords.x, currentCoords.y - 1, top));
-    }
-    // -Right
-    if ((currentCoords.x + 1) < (sizeX) && !(getCellByCoordinates(getCoordinatesFromDirection(currentCoords, right)).isVisited()))
-    {
-        availableNeighborsCount++;
-        availableNeighbors.push_back(Coordinates(currentCoords.x + 1, currentCoords.y, right));
-    }
-    // -bottom
-    if ((currentCoords.y + 1) < (sizeY) && !(getCellByCoordinates(getCoordinatesFromDirection(currentCoords, bottom)).isVisited()))
-    {
-        availableNeighborsCount++;
-        availableNeighbors.push_back(Coordinates(currentCoords.x, currentCoords.y + 1, bottom));
-    }
-    // -left
-    if ((currentCoords.x - 1) >= 0 && !(getCellByCoordinates(getCoordinatesFromDirection(currentCoords, left)).isVisited()))
-    {
-        availableNeighborsCount++;
-        availableNeighbors.push_back(Coordinates(currentCoords.x - 1, currentCoords.y, left));
-    }
+    if ((currentCoords.y - 1) >= 0 && !(getCellByCoordinates(CalculateCoordinatesFromDirection(currentCoords, top)).isVisited()))
+        availableNeighbors.push_back(CalculateCoordinatesFromDirection(currentCoords, top, true));
+
+    if ((currentCoords.x + 1) < (sizeX) && !(getCellByCoordinates(CalculateCoordinatesFromDirection(currentCoords, right)).isVisited()))
+        availableNeighbors.push_back(CalculateCoordinatesFromDirection(currentCoords, right, true));
+
+    if ((currentCoords.y + 1) < (sizeY) && !(getCellByCoordinates(CalculateCoordinatesFromDirection(currentCoords, bottom)).isVisited()))
+        availableNeighbors.push_back(CalculateCoordinatesFromDirection(currentCoords, bottom, true));
+
+    if ((currentCoords.x - 1) >= 0 && !(getCellByCoordinates(CalculateCoordinatesFromDirection(currentCoords, left)).isVisited()))
+        availableNeighbors.push_back(CalculateCoordinatesFromDirection(currentCoords, left, true));
 
     // set cell connection
     Coordinates nextCellCoords;
 
-    if (availableNeighborsCount == 1)
+    if (availableNeighbors.size() == 1)
         nextCellCoords = availableNeighbors.at(0);
-    else if (availableNeighborsCount == 2)
+    else if (availableNeighbors.size() == 2)
         nextCellCoords = availableNeighbors.at(distribute2(generator));
-    else if (availableNeighborsCount == 3)
+    else if (availableNeighbors.size() == 3)
         nextCellCoords = availableNeighbors.at(distribute2(generator));
     else
     {
@@ -224,10 +207,10 @@ bool Maze::generateWalls(Coordinates currentCoords, int visitedCount)
 
     visitedCount++;
     positionStack.push(currentCoords);
+    setCellConnection(currentCoords, nextCellCoords.direction);
 
-    setCellConnection(currentCoords.x, currentCoords.y, nextCellCoords.direction);
     generateWalls(nextCellCoords, visitedCount);
-    // will never reach
+
     return true;
 }
 
@@ -251,9 +234,11 @@ void Maze::printHorizontalLine(int length, int row, bool endline = false)
         else
             std::cout << horizontalWall;
 
+        // Add junction at maze border
         if (x == (length - 1))
             std::cout << junction;
     }
+    std::cout << std::endl;
 }
 
 const void Maze::printMaze()
@@ -267,14 +252,12 @@ const void Maze::printMaze()
 
     for (int y = 0; y < sizeY; y++)
     {
-
-        // will print slightly different line on final X loop
         printHorizontalLine(sizeX, y);
-        std::cout << std::endl;
 
         for (int x = 0; x < sizeX; x++)
         {
             cellContent = getCellByCoordinates(x, y).isVisited() ? filledCell : emptyCell;
+
             if (getCellByCoordinates(x, y).isConnectedTo(left) && x > 0)
                 std::cout << openVerticalWall;
             else
@@ -290,7 +273,11 @@ const void Maze::printMaze()
             // will print slightly different line on final X loop
             printHorizontalLine(sizeX, y, true);
     }
-    std::cout << std::endl;
+}
+
+Cell &Maze::getCellByCoordinates(Coordinates coords)
+{
+    return cells.at(coords.x).at(coords.y);
 }
 
 Cell &Maze::getCellByCoordinates(int x, int y)
@@ -298,50 +285,56 @@ Cell &Maze::getCellByCoordinates(int x, int y)
     return cells.at(x).at(y);
 }
 
-Cell &Maze::getCellByCoordinates(Coordinates coord)
-{
-    return cells.at(coord.x).at(coord.y);
-}
-
 // ========================
 
 bool findPath(Maze &m, Coordinates from, Coordinates to)
 {
-    std::vector<Directions> currentConnections;
-    // 1. M.at(from).visited <- true
-    m.getCellByCoordinates(from.x, from.y)
+    Coordinates currentNeighborCoords;
+    std::vector<Directions> currentCellConnections;
+
+    m.getCellByCoordinates(from)
         .setVisited();
-    // 2. if from equals to, return true
+
     if (from == to)
         return true;
-    // 3. neighbours <- list of all direct neighbours of from that can be reached (that are not blocked by walls)
-    Coordinates currentNeighbor;
-    currentConnections = m.getCellByCoordinates(from.x, from.y).getConnections();
-    // 4. for all n in neighbours:
-    for (Directions &connection : currentConnections)
+
+    currentCellConnections = m.getCellByCoordinates(from).getConnections();
+
+    for (Directions &connection : currentCellConnections)
     {
-        currentNeighbor = getCoordinatesFromDirection(from, connection);
-        //      if M.at(n).visited == false
-        if (m.getCellByCoordinates(currentNeighbor.x, currentNeighbor.y).isVisited() == false)
-        {
-            //          if findPath(n,to) == true, return true
-            if (findPath(m, currentNeighbor, to) == true)
+        currentNeighborCoords = CalculateCoordinatesFromDirection(from, connection);
+
+        if (m.getCellByCoordinates(currentNeighborCoords).isVisited() == false)
+            if (findPath(m, currentNeighborCoords, to) == true)
                 return true;
-        }
     }
-    // 5. M.at(from).visited <- false
-    m.getCellByCoordinates(from.x, from.y)
-        .resetVisited();
-    // 6. return false
+
+    m.getCellByCoordinates(from).resetVisited();
     return false;
 }
+
 int main(int argc, char *argv[])
 {
-    if (argc < 3 || argc > 4)
-        return -1;
-
     u32 seed;
-    int sizeX, sizeY;
+    int sizeY;
+    int sizeX;
+
+    try
+    {
+        if (argc < 3 || argc > 4)
+            throw std::runtime_error("Lack of necessary arguments: [height] [width] [OPTIONAL seed]");
+
+        sizeY = atoi(argv[1]);
+        sizeX = atoi(argv[2]);
+
+        if (sizeY <= 0 || sizeX <= 0)
+            throw std::runtime_error("Bad size: width and height must be at lease 1 cell!");
+    }
+    catch (std::runtime_error &excpt)
+    {
+        std::cout << excpt.what() << std::endl;
+        return -1;
+    }
 
     if (argc == 3)
     {
@@ -351,11 +344,7 @@ int main(int argc, char *argv[])
     else
         seed = atoi(argv[3]);
 
-    sizeY = atoi(argv[1]);
-    sizeX = atoi(argv[2]);
-
     Maze m(sizeX, sizeY, seed);
-
     m.generateMaze();
 
     if (findPath(m, Coordinates(0, 0), Coordinates(sizeX - 1, sizeY - 1)))
@@ -364,5 +353,6 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    // Exit with abnormal exit code if a path could not be found
     return -1;
 }
