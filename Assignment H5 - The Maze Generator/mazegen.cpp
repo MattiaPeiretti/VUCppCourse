@@ -18,6 +18,7 @@
 #include <stack>
 #include <cctype>
 #include <random>
+#include <stdlib.h>
 
 using u32 = uint_least32_t;
 using engine = std::mt19937;
@@ -200,14 +201,11 @@ bool Maze::generateWalls(Coordinates currentCoords, int visitedCount)
 
     getCellByCoordinates(currentCoords.x, currentCoords.y).setVisited();
 
-    LOG("Visited")
-    LOG(visitedCount);
-
     // check unvisited neighbors
     int availableNeighborsCount = 0;
     availableNeighbors = {};
     // -top
-    if ((currentCoords.y - 1) > 0 && !(getCellByCoordinates(currentCoords.x, currentCoords.y - 1).isVisited()))
+    if ((currentCoords.y - 1) >= 0 && !(getCellByCoordinates(currentCoords.x, currentCoords.y - 1).isVisited()))
     {
         availableNeighborsCount++;
         //LOG("TOP")
@@ -231,7 +229,7 @@ bool Maze::generateWalls(Coordinates currentCoords, int visitedCount)
         availableNeighbors.push_back(Coordinates(currentCoords.x, currentCoords.y + 1, bottom));
     }
     // -left
-    if ((currentCoords.x - 1) > 0 && !(getCellByCoordinates(currentCoords.x - 1, currentCoords.y).isVisited()))
+    if ((currentCoords.x - 1) >= 0 && !(getCellByCoordinates(currentCoords.x - 1, currentCoords.y).isVisited()))
     {
         availableNeighborsCount++;
         //LOG("LEFT")
@@ -240,8 +238,6 @@ bool Maze::generateWalls(Coordinates currentCoords, int visitedCount)
     }
     // set cell connection
     Coordinates nextCellCoords;
-    LOG("Av. neighbors")
-    LOG(availableNeighbors.size());
     if (availableNeighborsCount == 1)
         nextCellCoords = availableNeighbors.at(0);
     else if (availableNeighborsCount == 2)
@@ -255,16 +251,12 @@ bool Maze::generateWalls(Coordinates currentCoords, int visitedCount)
         if (generateWalls(positionStack.top(), visitedCount))
         {
 
-            LOG("---------");
             return true;
         }
     }
 
     visitedCount++;
     positionStack.push(currentCoords);
-    LOG("Coords added to stack");
-    LOG(currentCoords.x);
-    LOG(currentCoords.y);
 
     setCellConnection(currentCoords.x, currentCoords.y, nextCellCoords.direction);
     generateWalls(nextCellCoords, visitedCount);
@@ -363,7 +355,6 @@ bool findPath(Maze &m, Coordinates from, Coordinates to)
     m.getCellByCoordinates(from.x, from.y)
         .setVisited();
     // 2. if from equals to, return true
-    LOG("a");
     if (from == to)
         return true;
     // 3. neighbours <- list of all direct neighbours of from that can be reached (that are not blocked by walls)
@@ -389,21 +380,32 @@ bool findPath(Maze &m, Coordinates from, Coordinates to)
 }
 int main(int argc, char *argv[])
 {
-    // if (argc < 2)
-    //     return -1;
+    if (argc < 3 || argc > 4)
+        return -1;
+
+    u32 seed;
+    int sizeX, sizeY;
+
+    if (argc == 3)
+    {
+        std::random_device os_seed;
+        seed = os_seed();
+    }
+    else
+        seed = atoi(argv[3]);
+
+    sizeX = atoi(argv[1]);
+    sizeY = atoi(argv[2]);
 
     // if (Coordinates(0, 0) == Coordinates(1, 0))
     //     LOG("aaa");
 
-    std::random_device os_seed;
-    const u32 seed = os_seed();
-
-    Maze m(25, 25, seed);
+    Maze m(sizeX, sizeY, seed);
 
     m.generateMaze();
     std::cout
         << std::endl;
-    if (findPath(m, Coordinates(0, 0), Coordinates(24, 24)))
+    if (findPath(m, Coordinates(0, 0), Coordinates(sizeX - 1, sizeY - 1)))
         LOG("Yay!");
 
     m.printMaze();
